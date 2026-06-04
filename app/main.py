@@ -8,7 +8,7 @@ from app.routers import meetings
 
 app = FastAPI(
     title="EchoBrief API",
-    description="Backend asíncrono para estructurar reuniones con Ollama e Instructor",
+    description="Aync backend to structure meetings with Ollama and Instructor",
     version="1.0.0"
 )
 
@@ -29,4 +29,4 @@ app.include_router(meetings.router, prefix="/api/v1")
 
 @app.get("/")
 async def root():
-    return {"status": "online", "message": "EchoBrief Backend está listo"}
+    return {"status": "online", "message": "EchoBrief Backend is ready"}

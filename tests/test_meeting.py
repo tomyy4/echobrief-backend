@@ -1,23 +1,6 @@
-import pytest
-from fastapi.testclient import TestClient
-from app.main import app
-from app.routers.meetings import db_mock
-from app.schemas.meeting import MeetingAnalysis
+from app.models.meeting import MeetingTask
 
-client = TestClient(app)
-
-@pytest.fixture
-def mock_meeting_analysis():
-    return MeetingAnalysis(
-        summary="Reunión de prueba exitosa.",
-        sentiment="Positivo",
-        key_topics=["Testing", "FastAPI"],
-        commitments=[
-            {"owner": "Tester", "task": "Escribir pruebas unitarias", "deadline": "Hoy"}
-        ]
-    )
-
-def test_upload_meeting_success(mocker, mock_meeting_analysis):
+def test_upload_meeting_success(client, session, mocker, mock_meeting_analysis):
     mocker.patch(
         "app.routers.meetings.analyze_transcript_with_ollama",
         return_value=mock_meeting_analysis
@@ -36,11 +19,34 @@ def test_upload_meeting_success(mocker, mock_meeting_analysis):
     assert data["status"] == "PROCESSING"
 
     task_id = data["task_id"]
-    assert db_mock[task_id]["status"] == "COMPLETED"
-    assert db_mock[task_id]["result"]["sentiment"] == "Positivo"
+
+  
+    task_in_db = session.get(MeetingTask, task_id)
+    
+    assert task_in_db is not None
+    assert task_in_db.status == "COMPLETED"
+    assert task_in_db.title == "Daily Test"
+    assert task_in_db.result["sentiment"] == "Positivo"
+    assert len(task_in_db.result["commitments"]) == 1
 
 
-def test_get_meeting_not_found():
-    response = client.get("/api/v1/meetings/id-inexistente")
+def test_get_meeting_not_found(client):
+    response = client.get("/api/v1/meetings/not-existing")
     assert response.status_code == 404
     assert response.json()["detail"] == "Análisis no encontrado"
+
+
+def test_get_all_meeting_titles(client, session):
+    task1 = MeetingTask(id="1", title="Reunión A", status="COMPLETED")
+    task2 = MeetingTask(id="2", title="Reunión B", status="PROCESSING")
+    session.add(task1)
+    session.add(task2)
+    session.commit()
+
+    response = client.get("/api/v1/meetings/tasks/")
+    assert response.status_code == 200
+    
+    data = response.json()
+    assert len(data) == 2
+    assert data[0]["title"] == "Reunión A"
+    assert "result_json" not in data[0] 
