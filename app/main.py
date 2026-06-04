@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import meetings
+from app.routers import meetings
 
 app = FastAPI(
     title="EchoBrief API",

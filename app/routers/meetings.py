@@ -3,8 +3,8 @@ from pydantic import BaseModel
 from typing import Dict, Any
 import uuid
 
-from schemas.meeting import MeetingAnalysis
-from services.ollama import analyze_transcript_with_ollama
+from app.schemas.meeting import MeetingAnalysis
+from app.services.ollama import analyze_transcript_with_ollama
 
 router = APIRouter(prefix="/meetings", tags=["Meetings"])
 

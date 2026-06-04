@@ -1,6 +1,6 @@
 import instructor
 from openai import OpenAI
-from schemas.meeting import MeetingAnalysis
+from app.schemas.meeting import MeetingAnalysis
 
 client = instructor.from_openai(
     OpenAI(
