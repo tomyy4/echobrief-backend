@@ -1,51 +1,64 @@
-from fastapi import APIRouter, BackgroundTasks, HTTPException, status
-from pydantic import BaseModel
-from typing import Dict, Any
+from fastapi import APIRouter, BackgroundTasks, HTTPException, status, Depends
+from sqlmodel import Session
 import uuid
 
-from app.schemas.meeting import MeetingAnalysis
+from app.core.database import get_session
+from app.models.meeting import MeetingTask
+from app.schemas.meeting import MeetingAnalysis, MeetingUpload, TaskResponse
 from app.services.ollama import analyze_transcript_with_ollama
 
 router = APIRouter(prefix="/meetings", tags=["Meetings"])
 
-# fake database
-db_mock: Dict[str, Dict[str, Any]] = {}
+def task_process_meeting(task_id: str, transcript: str, engine_instance):
+    """Process the LLM in the background with its own db session"""
+    with Session(engine_instance) as session:
 
-class MeetingUpload(BaseModel):
-    title: str
-    transcript: str
+        task = session.get(MeetingTask, task_id)
+        if not task:
+            return
 
-class TaskResponse(BaseModel):
-    task_id: str
-    status: str
-
-def task_process_meeting(task_id: str, transcript: str):
-    try:
-        analysis: MeetingAnalysis = analyze_transcript_with_ollama(transcript)
+        try:
+            analysis: MeetingAnalysis = analyze_transcript_with_ollama(transcript)
+            
+            task.status = "COMPLETED"
+            task.result = analysis.model_dump()
+        except Exception as e:
+            task.status = "FAILED"
+            task.error = str(e)
         
-        db_mock[task_id]["status"] = "COMPLETED"
-        db_mock[task_id]["result"] = analysis.model_dump()
-    except Exception as e:
-        db_mock[task_id]["status"] = "FAILED"
-        db_mock[task_id]["error"] = str(e)
+        session.add(task)
+        session.commit()
 
 @router.post("/", response_model=TaskResponse, status_code=status.HTTP_202_ACCEPTED)
-async def upload_meeting(payload: MeetingUpload, background_tasks: BackgroundTasks):
+async def upload_meeting(
+    payload: MeetingUpload, 
+    background_tasks: BackgroundTasks, 
+    session: Session = Depends(get_session)
+):
     task_id = str(uuid.uuid4())
     
-    db_mock[task_id] = {
-        "title": payload.title,
-        "status": "PROCESSING",
-        "result": None,
-        "error": None
-    }
+    # create the task in DB
+    new_task = MeetingTask(
+        id=task_id,
+        title=payload.title,
+        status="PROCESSING"
+    )
+    session.add(new_task)
+    session.commit()
     
-    background_tasks.add_task(task_process_meeting, task_id, payload.transcript)
+    background_tasks.add_task(task_process_meeting, task_id, payload.transcript, session.bind)
     
     return TaskResponse(task_id=task_id, status="PROCESSING")
 
 @router.get("/{task_id}")
-async def get_meeting_analysis(task_id: str):
-    if task_id not in db_mock:
+async def get_meeting_analysis(task_id: str, session: Session = Depends(get_session)):
+    task = session.get(MeetingTask, task_id)
+    if not task:
         raise HTTPException(status_code=404, detail="Análisis no encontrado")
-    return db_mock[task_id]
+    
+    return {
+        "title": task.title,
+        "status": task.status,
+        "result": task.result,
+        "error": task.error
+    }

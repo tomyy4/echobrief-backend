@@ -11,3 +11,13 @@ class MeetingAnalysis(BaseModel):
     sentiment: str = Field(..., description="General feeling (ex Productive, Tense, Colaborative)")
     key_topics: List[str] = Field(..., description="Subjects disscused")
     commitments: List[Commitment] = Field(..., description="Commitments detected")
+
+
+class MeetingUpload(BaseModel):
+    """Frontend Payload"""
+    title: str
+    transcript: str
+
+class TaskResponse(BaseModel):
+    task_id: str
+    status: str

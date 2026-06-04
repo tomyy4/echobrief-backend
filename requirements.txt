@@ -1,7 +1,7 @@
 fastapi==0.136
 instructor==1.15.1
 python-dotenv==1.2.2
-
+sqlmodel==0.0.38
 
 ### TEST Dependencies
 pytest==9.0.3
