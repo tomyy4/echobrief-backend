@@ -1,3 +1,9 @@
 fastapi==0.136
 instructor==1.15.1
 python-dotenv==1.2.2
+
+
+### TEST Dependencies
+pytest==9.0.3
+httpx==0.28.1
+pytest-mock==3.15.1
