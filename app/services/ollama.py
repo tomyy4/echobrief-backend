@@ -4,7 +4,7 @@ from app.schemas.meeting import MeetingAnalysis
 
 client = instructor.from_openai(
     OpenAI(
-        base_url="http://localhost:11434/v1", # URL por defecto de Ollama
+        base_url="http://localhost:11434/v1",
         api_key="ollama", # Ignored by ollama
     ),
     mode=instructor.Mode.JSON

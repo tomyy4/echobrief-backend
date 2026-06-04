@@ -21,3 +21,13 @@ class MeetingUpload(BaseModel):
 class TaskResponse(BaseModel):
     task_id: str
     status: str
+
+
+
+class MeetingTitleResponse(BaseModel):
+    id: str
+    title: str
+    status: str
+
+    class Config:
+        from_attributes = True

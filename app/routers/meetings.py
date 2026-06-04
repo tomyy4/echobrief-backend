@@ -1,13 +1,25 @@
-from fastapi import APIRouter, BackgroundTasks, HTTPException, status, Depends
-from sqlmodel import Session
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, status, Depends
+from sqlmodel import Session, select
 import uuid
 
 from app.core.database import get_session
 from app.models.meeting import MeetingTask
-from app.schemas.meeting import MeetingAnalysis, MeetingUpload, TaskResponse
+from app.schemas.meeting import MeetingAnalysis, MeetingTitleResponse, MeetingUpload, TaskResponse
 from app.services.ollama import analyze_transcript_with_ollama
 
 router = APIRouter(prefix="/meetings", tags=["Meetings"])
+
+
+@router.get("/tasks/")
+async def get_all_meeting_tasks(
+    session: Session = Depends(get_session),
+    limit: int = Query(default=50, le=100)
+    ):
+    
+    statement = select(MeetingTask.id, MeetingTask.title, MeetingTask.status).limit(limit)
+    tasks = session.exec(statement).all()
+    return [MeetingTitleResponse(id=row[0], title=row[1], status=row[2]) for row in tasks]
+
 
 def task_process_meeting(task_id: str, transcript: str, engine_instance):
     """Process the LLM in the background with its own db session"""
