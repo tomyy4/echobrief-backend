@@ -1,1 +1,3 @@
 fastapi==0.136
+instructor==1.15.1
+python-dotenv==1.2.2
